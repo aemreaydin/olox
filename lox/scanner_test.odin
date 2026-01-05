@@ -1,6 +1,5 @@
 package lox
 
-import "core:fmt"
 import "core:testing"
 
 @(test)
