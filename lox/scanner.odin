@@ -1,10 +1,12 @@
 package lox
 
+import "core:strings"
 import "core:unicode"
 import "core:unicode/utf8/utf8string"
 
 ScannerError :: enum {
 	UNTERMINATED_STRING,
+	UNTERMINATED_BLOCK_COMMENT,
 	UNEXPECTED_CHARACTER,
 }
 
@@ -69,18 +71,38 @@ scan_token :: proc(scanner: ^Scanner) {
 	case '*':
 		add_token(scanner, TokenType.STAR)
 	case '!':
-		add_token(scanner, match(scanner, '=') ? TokenType.BANG_EQUAL : TokenType.BANG)
+		if peek_next(scanner) == '=' {
+			add_token(scanner, TokenType.BANG_EQUAL)
+			advance(scanner)
+		} else {
+			add_token(scanner, TokenType.BANG)
+		}
 	case '=':
-		add_token(scanner, match(scanner, '=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL)
+		if peek_next(scanner) == '=' {
+			add_token(scanner, TokenType.EQUAL_EQUAL)
+			advance(scanner)
+		} else {
+			add_token(scanner, TokenType.EQUAL)
+		}
 	case '<':
-		add_token(scanner, match(scanner, '=') ? TokenType.LESS_EQUAL : TokenType.LESS)
+		if peek_next(scanner) == '=' {
+			add_token(scanner, TokenType.LESS_EQUAL)
+			advance(scanner)
+		} else {
+			add_token(scanner, TokenType.LESS)
+		}
 	case '>':
-		add_token(scanner, match(scanner, '=') ? TokenType.GREATER_EQUAL : TokenType.GREATER)
+		if peek_next(scanner) == '=' {
+			add_token(scanner, TokenType.GREATER_EQUAL)
+			advance(scanner)
+		} else {
+			add_token(scanner, TokenType.GREATER)
+		}
 	case '/':
-		if match(scanner, '/') {
-			for peek(scanner) != '\n' && !is_eof(scanner) {
-				advance(scanner)
-			}
+		if peek_next(scanner) == '/' {
+			add_comment_token(scanner)
+		} else if peek_next(scanner) == '*' {
+			add_block_comment_token(scanner)
 		} else {
 			add_token(scanner, TokenType.SLASH)
 		}
@@ -107,8 +129,8 @@ add_token :: proc(scanner: ^Scanner, token_type: TokenType) {
 		lexeme     = utf8string.slice(&scanner.source, scanner.start, scanner.current),
 		line       = scanner.line,
 	}
-	advance(scanner)
 	append(&scanner.tokens, token)
+	advance(scanner)
 }
 
 @(private)
@@ -133,8 +155,8 @@ add_string_token :: proc(scanner: ^Scanner) {
 		line       = scanner.line,
 	}
 
-	advance(scanner)
 	append(&scanner.tokens, token)
+	advance(scanner)
 }
 
 @(private)
@@ -173,6 +195,62 @@ add_identifier_token :: proc(scanner: ^Scanner) {
 	append(&scanner.tokens, token)
 }
 
+@(private)
+add_comment_token :: proc(scanner: ^Scanner) {
+	for peek(scanner) != '\n' && !is_eof(scanner) {
+		advance(scanner)
+	}
+
+	lexeme := utf8string.slice(&scanner.source, scanner.start + 2, scanner.current)
+	lexeme = strings.trim_left(lexeme, " ")
+	token := Token {
+		token_type = .COMMENT,
+		lexeme     = lexeme,
+		line       = scanner.line,
+	}
+	append(&scanner.tokens, token)
+}
+
+@(private)
+add_block_comment_token :: proc(scanner: ^Scanner) {
+	depth := 1
+
+	advance(scanner)
+	advance(scanner)
+
+	for depth != 0 {
+		if peek(scanner) == '*' && peek_next(scanner) == '/' {
+			depth -= 1
+			advance(scanner)
+		} else if peek(scanner) == '/' && peek_next(scanner) == '*' {
+			depth += 1
+			advance(scanner)
+		}
+
+		if peek(scanner) == '\n' {
+			scanner.line += 1
+		}
+
+		if is_eof(scanner) {
+			add_error(scanner, .UNTERMINATED_BLOCK_COMMENT)
+			return
+		}
+
+		advance(scanner)
+	}
+
+	lexeme := utf8string.slice(&scanner.source, scanner.start + 2, scanner.current - 2)
+	lexeme = strings.trim_left(lexeme, " ")
+	lexeme = strings.trim_right(lexeme, " ")
+
+	token := Token {
+		token_type = .COMMENT,
+		lexeme     = lexeme,
+		line       = scanner.line,
+	}
+	append(&scanner.tokens, token)
+}
+
 @(private = "file")
 add_error :: proc(scanner: ^Scanner, error: ScannerError) {
 	append(&scanner.errors, error)
@@ -203,17 +281,6 @@ peek_next :: proc(scanner: ^Scanner) -> rune {
 		return 0
 	}
 	return utf8string.at(&scanner.source, scanner.current + 1)
-}
-
-@(private = "file")
-match :: proc(scanner: ^Scanner, expected: rune) -> (is_match: bool = true) {
-	defer if is_match {
-		scanner.current += 1
-	}
-	if is_eof(scanner) || peek(scanner) != expected {
-		is_match = false
-	}
-	return is_match
 }
 
 @(private = "file")

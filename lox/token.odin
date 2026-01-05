@@ -39,6 +39,7 @@ TokenType :: enum {
 	TRUE,
 	VAR,
 	WHILE,
+	COMMENT,
 	EOF,
 }
 

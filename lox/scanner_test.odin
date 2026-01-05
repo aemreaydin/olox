@@ -1,5 +1,6 @@
 package lox
 
+import "core:fmt"
 import "core:testing"
 
 @(test)
@@ -348,4 +349,112 @@ test_add_identifier_token_with_trailing_content :: proc(t: ^testing.T) {
 	testing.expect_value(t, len(scanner.tokens), 1)
 	testing.expect_value(t, scanner.tokens[0].lexeme, "foo")
 	testing.expect_value(t, scanner.tokens[0].token_type, TokenType.IDENT)
+}
+
+@(test)
+test_add_comment_token_basic :: proc(t: ^testing.T) {
+	scanner := make_scanner("// test comment")
+	defer destroy_scanner(&scanner)
+
+	add_comment_token(&scanner)
+
+	testing.expect_value(t, len(scanner.tokens), 1)
+	testing.expect_value(t, scanner.tokens[0].lexeme, "test comment")
+	testing.expect_value(t, scanner.tokens[0].token_type, TokenType.COMMENT)
+}
+
+@(test)
+test_add_comment_token_empty :: proc(t: ^testing.T) {
+	scanner := make_scanner("//")
+	defer destroy_scanner(&scanner)
+
+	add_comment_token(&scanner)
+
+	testing.expect_value(t, len(scanner.tokens), 1)
+	testing.expect_value(t, scanner.tokens[0].lexeme, "")
+	testing.expect_value(t, scanner.tokens[0].token_type, TokenType.COMMENT)
+}
+
+@(test)
+test_add_block_comment_token_basic :: proc(t: ^testing.T) {
+	str := "/* block comment */"
+	scanner := make_scanner(str)
+	defer destroy_scanner(&scanner)
+
+	add_block_comment_token(&scanner)
+
+	testing.expect_value(t, len(scanner.tokens), 1)
+	testing.expect_value(t, scanner.tokens[0].lexeme, "block comment")
+	testing.expect_value(t, scanner.tokens[0].token_type, TokenType.COMMENT)
+}
+
+@(test)
+test_add_block_comment_token_empty :: proc(t: ^testing.T) {
+	scanner := make_scanner("/**/")
+	defer destroy_scanner(&scanner)
+
+	add_block_comment_token(&scanner)
+
+	testing.expect_value(t, len(scanner.tokens), 1)
+	testing.expect_value(t, scanner.tokens[0].lexeme, "")
+	testing.expect_value(t, scanner.tokens[0].token_type, TokenType.COMMENT)
+}
+
+@(test)
+test_add_block_comment_token_multiline :: proc(t: ^testing.T) {
+	scanner := make_scanner("/* line1\nline2 */")
+	defer destroy_scanner(&scanner)
+
+	add_block_comment_token(&scanner)
+
+	testing.expect_value(t, len(scanner.tokens), 1)
+	testing.expect_value(t, scanner.tokens[0].lexeme, "line1\nline2")
+	testing.expect_value(t, scanner.tokens[0].token_type, TokenType.COMMENT)
+}
+
+@(test)
+test_add_block_comment_token_nested :: proc(t: ^testing.T) {
+	scanner := make_scanner("/* outer /* inner */ outer */")
+	defer destroy_scanner(&scanner)
+
+	add_block_comment_token(&scanner)
+
+	testing.expect_value(t, len(scanner.tokens), 1)
+	testing.expect_value(t, scanner.tokens[0].token_type, TokenType.COMMENT)
+}
+
+@(test)
+test_add_block_comment_token_deeply_nested :: proc(t: ^testing.T) {
+	scanner := make_scanner("/* a /* b /* c */ b */ a */")
+	defer destroy_scanner(&scanner)
+
+	add_block_comment_token(&scanner)
+
+	testing.expect_value(t, len(scanner.tokens), 1)
+	testing.expect_value(t, scanner.tokens[0].token_type, TokenType.COMMENT)
+}
+
+@(test)
+test_add_block_comment_token_unterminated :: proc(t: ^testing.T) {
+	scanner := make_scanner("/* unterminated")
+	defer destroy_scanner(&scanner)
+
+	add_block_comment_token(&scanner)
+
+	testing.expect_value(t, len(scanner.tokens), 0)
+	testing.expect_value(t, len(scanner.errors), 1)
+	testing.expect_value(t, scanner.errors[0], ScannerError.UNTERMINATED_BLOCK_COMMENT)
+}
+
+@(test)
+test_add_block_comment_token_unterminated_nested :: proc(t: ^testing.T) {
+	// Nested comment where inner is closed but outer is not
+	scanner := make_scanner("/* outer /* inner */")
+	defer destroy_scanner(&scanner)
+
+	add_block_comment_token(&scanner)
+
+	testing.expect_value(t, len(scanner.tokens), 0)
+	testing.expect_value(t, len(scanner.errors), 1)
+	testing.expect_value(t, scanner.errors[0], ScannerError.UNTERMINATED_BLOCK_COMMENT)
 }
