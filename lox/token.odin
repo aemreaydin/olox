@@ -43,8 +43,21 @@ TokenType :: enum {
 	EOF,
 }
 
+Number :: f64
+String :: string
+Boolean :: bool
+Nil :: struct {}
+
+Value :: union {
+	String,
+	Number,
+	Boolean,
+	Nil,
+}
+
 Token :: struct {
 	token_type: TokenType,
 	lexeme:     string,
+	value:      Value,
 	line:       int,
 }

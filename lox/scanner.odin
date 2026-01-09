@@ -1,5 +1,6 @@
 package lox
 
+import "core:strconv"
 import "core:strings"
 import "core:unicode"
 import "core:unicode/utf8/utf8string"
@@ -8,6 +9,7 @@ ScannerError :: enum {
 	UNTERMINATED_STRING,
 	UNTERMINATED_BLOCK_COMMENT,
 	UNEXPECTED_CHARACTER,
+	INVALID_NUMBER,
 }
 
 Scanner :: struct {
@@ -149,10 +151,12 @@ add_string_token :: proc(scanner: ^Scanner) {
 		return
 	}
 
+	lexeme := utf8string.slice(&scanner.source, scanner.start + 1, scanner.current)
 	token := Token {
 		token_type = .STRING,
-		lexeme     = utf8string.slice(&scanner.source, scanner.start + 1, scanner.current),
+		lexeme     = lexeme,
 		line       = scanner.line,
+		value      = lexeme,
 	}
 
 	append(&scanner.tokens, token)
@@ -172,10 +176,17 @@ add_number_token :: proc(scanner: ^Scanner) {
 		}
 	}
 
+	lexeme := utf8string.slice(&scanner.source, scanner.start, scanner.current)
+	value, ok := strconv.parse_f64(lexeme)
+	if !ok {
+		add_error(scanner, .INVALID_NUMBER)
+	}
+
 	token := Token {
 		token_type = .NUMBER,
-		lexeme     = utf8string.slice(&scanner.source, scanner.start, scanner.current),
+		lexeme     = lexeme,
 		line       = scanner.line,
+		value      = value,
 	}
 	append(&scanner.tokens, token)
 }
@@ -187,8 +198,21 @@ add_identifier_token :: proc(scanner: ^Scanner) {
 	}
 
 	lexeme := utf8string.slice(&scanner.source, scanner.start, scanner.current)
+	token_type := get_identifier_type(lexeme)
+
+	value: Value
+
+	#partial switch token_type {
+	case .TRUE:
+		value = true
+	case .FALSE:
+		value = false
+	case .NIL:
+		value = Nil{}
+	}
+
 	token := Token {
-		token_type = get_identifier_type(lexeme),
+		token_type = token_type,
 		lexeme     = lexeme,
 		line       = scanner.line,
 	}

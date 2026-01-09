@@ -86,12 +86,52 @@ main :: proc() {
 		}
 	}
 
-	switch args := os.args; len(args) {
-	case 2:
-		runFile(args[1])
-	case 1:
-		runPrompt()
-	case:
-		fmt.println("[Usage]: olox [script_file]")
+	// switch args := os.args; len(args) {
+	// case 2:
+	// 	runFile(args[1])
+	// case 1:
+	// 	runPrompt()
+	// case:
+	// 	fmt.println("[Usage]: olox [script_file]")
+	// }
+
+	lit_123 := new(lox.Literal)
+	lit_123.value = lox.Token {
+		token_type = .NUMBER,
+		lexeme     = "123.0",
+		value      = 123.0,
+		line       = 1,
 	}
+
+	unary := new(lox.Unary)
+	unary.operator = lox.Token {
+		token_type = .MINUS,
+		lexeme     = "-",
+		value      = nil,
+		line       = 1,
+	}
+	unary.expression = lit_123
+
+	lit_45 := new(lox.Literal)
+	lit_45.value = lox.Token {
+		token_type = .NUMBER,
+		lexeme     = "45.67",
+		value      = 45.67,
+		line       = 1,
+	}
+
+	group := new(lox.Grouping)
+	group.expression = lit_45
+
+	binary := new(lox.Binary)
+	binary.left = unary
+	binary.operator = lox.Token {
+		token_type = .STAR,
+		lexeme     = "*",
+		value      = nil,
+		line       = 1,
+	}
+	binary.right = group
+
+	lox.print_ast(binary)
 }
