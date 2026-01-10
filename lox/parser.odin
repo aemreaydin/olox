@@ -150,6 +150,22 @@ consume_primary :: proc(using parser: ^Parser) -> (Expr, ParserError) {
 	return {}, ParserError{kind = .EXPECTED_EXPRESSION, token = token, message = fmt.tprintf("Expected expression but got '%v'", token.token_type)}
 }
 
+synchronize :: proc(using parser: ^Parser) {
+	advance(parser)
+	for !is_eof(parser) {
+		if previous(parser).token_type == .SEMICOLON {
+			return
+		}
+
+		#partial switch peek(parser).token_type {
+		case .CLASS, .FOR, .FN, .IF, .PRINT, .RETURN, .VAR, .WHILE:
+			return
+		}
+
+		advance(parser)
+	}
+}
+
 @(private = "file")
 match :: proc(parser: ^Parser, tokens: ..TokenType) -> bool {
 	if is_eof(parser) {
