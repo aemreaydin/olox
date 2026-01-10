@@ -18,7 +18,7 @@ Grouping :: struct {
 }
 
 Literal :: struct {
-	value: Token,
+	value: Value,
 }
 
 Unary :: struct {

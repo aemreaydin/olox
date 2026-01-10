@@ -9,10 +9,11 @@ import "core:strings"
 import "lox"
 
 run :: proc(source: string) -> bool {
-	scanner := lox.make_scanner(source)
+	scanner := lox.init_scanner(source)
 	defer lox.destroy_scanner(&scanner)
 
 	lox.scan_tokens(&scanner)
+	fmt.println(scanner.tokens)
 
 	if lox.has_error(&scanner) {
 		for err in scanner.errors {
@@ -21,9 +22,19 @@ run :: proc(source: string) -> bool {
 		return false
 	}
 
-	for token in scanner.tokens {
-		fmt.printf("%v\n", token)
+	parser := lox.init_parser(scanner.tokens)
+	defer lox.destroy_parser(&parser)
+
+	expr, err := lox.parse(&parser)
+	if err.kind != .NONE {
+		fmt.eprintf("Parse error at line %d: %s\n", err.token.line, err.message)
+		return false
 	}
+
+	fmt.println("AST:")
+	lox.print_ast(expr)
+	fmt.println()
+
 	return true
 }
 
@@ -86,52 +97,12 @@ main :: proc() {
 		}
 	}
 
-	// switch args := os.args; len(args) {
-	// case 2:
-	// 	runFile(args[1])
-	// case 1:
-	// 	runPrompt()
-	// case:
-	// 	fmt.println("[Usage]: olox [script_file]")
-	// }
-
-	lit_123 := new(lox.Literal)
-	lit_123.value = lox.Token {
-		token_type = .NUMBER,
-		lexeme     = "123.0",
-		value      = 123.0,
-		line       = 1,
+	switch args := os.args; len(args) {
+	case 2:
+		runFile(args[1])
+	case 1:
+		runPrompt()
+	case:
+		fmt.println("[Usage]: olox [script_file]")
 	}
-
-	unary := new(lox.Unary)
-	unary.operator = lox.Token {
-		token_type = .MINUS,
-		lexeme     = "-",
-		value      = nil,
-		line       = 1,
-	}
-	unary.expression = lit_123
-
-	lit_45 := new(lox.Literal)
-	lit_45.value = lox.Token {
-		token_type = .NUMBER,
-		lexeme     = "45.67",
-		value      = 45.67,
-		line       = 1,
-	}
-
-	group := new(lox.Grouping)
-	group.expression = lit_45
-
-	binary := new(lox.Binary)
-	binary.left = unary
-	binary.operator = lox.Token {
-		token_type = .STAR,
-		lexeme     = "*",
-		value      = nil,
-		line       = 1,
-	}
-	binary.right = group
-
-	lox.print_ast(binary)
 }

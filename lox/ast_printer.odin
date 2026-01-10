@@ -13,7 +13,7 @@ print_ast :: proc(expr: Expr) {
 		print_ast(e.expression)
 		fmt.print(" )")
 	case ^Literal:
-		fmt.print(e.value.value)
+		fmt.print(e.value)
 	case ^Unary:
 		fmt.print(e.operator.lexeme)
 		print_ast(e.expression)
