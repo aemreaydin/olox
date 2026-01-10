@@ -2,7 +2,6 @@ package lox
 
 import "core:fmt"
 import "core:strconv"
-import "core:strings"
 
 ScannerErrorKind :: enum {
 	UNTERMINATED_STRING,
@@ -111,9 +110,9 @@ scan_token :: proc(scanner: ^Scanner) {
 		}
 	case '/':
 		if peek_next(scanner) == '/' {
-			add_comment_token(scanner)
+			skip_comment(scanner)
 		} else if peek_next(scanner) == '*' {
-			add_block_comment_token(scanner)
+			skip_block_comment(scanner)
 		} else {
 			add_token(scanner, TokenType.SLASH)
 		}
@@ -228,23 +227,14 @@ add_identifier_token :: proc(scanner: ^Scanner) {
 }
 
 @(private)
-add_comment_token :: proc(scanner: ^Scanner) {
+skip_comment :: proc(scanner: ^Scanner) {
 	for peek(scanner) != '\n' && !is_eof(scanner) {
 		advance(scanner)
 	}
-
-	lexeme := scanner.source[scanner.start + 2:scanner.current]
-	lexeme = strings.trim_left(lexeme, " ")
-	token := Token {
-		token_type = .COMMENT,
-		lexeme     = lexeme,
-		line       = scanner.line,
-	}
-	append(&scanner.tokens, token)
 }
 
 @(private)
-add_block_comment_token :: proc(scanner: ^Scanner) {
+skip_block_comment :: proc(scanner: ^Scanner) {
 	depth := 1
 
 	advance(scanner)
@@ -266,17 +256,6 @@ add_block_comment_token :: proc(scanner: ^Scanner) {
 
 		advance(scanner)
 	}
-
-	lexeme := scanner.source[scanner.start + 2:scanner.current - 2]
-	lexeme = strings.trim_left(lexeme, " ")
-	lexeme = strings.trim_right(lexeme, " ")
-
-	token := Token {
-		token_type = .COMMENT,
-		lexeme     = lexeme,
-		line       = scanner.line,
-	}
-	append(&scanner.tokens, token)
 }
 
 @(private = "file")
