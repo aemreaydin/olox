@@ -10,6 +10,7 @@ TokenType :: enum {
 	MINUS,
 	PLUS,
 	SEMICOLON,
+	COLON,
 	SLASH,
 	STAR,
 	BANG,
@@ -39,6 +40,7 @@ TokenType :: enum {
 	TRUE,
 	VAR,
 	WHILE,
+	QUESTION,
 	EOF,
 }
 

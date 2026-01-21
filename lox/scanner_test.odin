@@ -7,9 +7,9 @@ test_make_string_basic :: proc(t: ^testing.T) {
 	scanner := init_scanner(`"hello"`)
 	defer destroy_scanner(&scanner)
 
-	add_string_token(&scanner)
+	scan_tokens(&scanner)
 
-	testing.expect_value(t, len(scanner.tokens), 1)
+	testing.expect_value(t, len(scanner.tokens), 2) // STRING + EOF
 	testing.expect_value(t, scanner.tokens[0].lexeme, "hello")
 	testing.expect_value(t, scanner.tokens[0].token_type, TokenType.STRING)
 	testing.expect_value(t, scanner.tokens[0].line, 1)
@@ -20,9 +20,9 @@ test_make_string_empty :: proc(t: ^testing.T) {
 	scanner := init_scanner(`""`)
 	defer destroy_scanner(&scanner)
 
-	add_string_token(&scanner)
+	scan_tokens(&scanner)
 
-	testing.expect_value(t, len(scanner.tokens), 1)
+	testing.expect_value(t, len(scanner.tokens), 2) // STRING + EOF
 	testing.expect_value(t, scanner.tokens[0].lexeme, "")
 	testing.expect_value(t, scanner.tokens[0].token_type, TokenType.STRING)
 	testing.expect_value(t, scanner.tokens[0].line, 1)
@@ -33,9 +33,9 @@ test_make_string_multiline :: proc(t: ^testing.T) {
 	scanner := init_scanner("\"hello\nworld\"")
 	defer destroy_scanner(&scanner)
 
-	add_string_token(&scanner)
+	scan_tokens(&scanner)
 
-	testing.expect_value(t, len(scanner.tokens), 1)
+	testing.expect_value(t, len(scanner.tokens), 2) // STRING + EOF
 	testing.expect_value(t, scanner.tokens[0].lexeme, "hello\nworld")
 	testing.expect_value(t, scanner.tokens[0].token_type, TokenType.STRING)
 	testing.expect_value(t, scanner.tokens[0].line, 2)
@@ -46,9 +46,9 @@ test_make_string_multiple_newlines :: proc(t: ^testing.T) {
 	scanner := init_scanner("\"\nhello\nworld\"")
 	defer destroy_scanner(&scanner)
 
-	add_string_token(&scanner)
+	scan_tokens(&scanner)
 
-	testing.expect_value(t, len(scanner.tokens), 1)
+	testing.expect_value(t, len(scanner.tokens), 2) // STRING + EOF
 	testing.expect_value(t, scanner.tokens[0].lexeme, "\nhello\nworld")
 	testing.expect_value(t, scanner.tokens[0].token_type, TokenType.STRING)
 	testing.expect_value(t, scanner.tokens[0].line, 3)
@@ -59,9 +59,9 @@ test_make_string_unterminated :: proc(t: ^testing.T) {
 	scanner := init_scanner(`"unterminated`)
 	defer destroy_scanner(&scanner)
 
-	add_string_token(&scanner)
+	scan_tokens(&scanner)
 
-	testing.expect_value(t, len(scanner.tokens), 0)
+	testing.expect_value(t, len(scanner.tokens), 1) // Only EOF
 	testing.expect_value(t, len(scanner.errors), 1)
 	testing.expect_value(t, scanner.errors[0].kind, ScannerErrorKind.UNTERMINATED_STRING)
 }
@@ -71,9 +71,9 @@ test_make_string_unterminated_with_newlines :: proc(t: ^testing.T) {
 	scanner := init_scanner("\"unterminated\nunterminated_line")
 	defer destroy_scanner(&scanner)
 
-	add_string_token(&scanner)
+	scan_tokens(&scanner)
 
-	testing.expect_value(t, len(scanner.tokens), 0)
+	testing.expect_value(t, len(scanner.tokens), 1) // Only EOF
 	testing.expect_value(t, len(scanner.errors), 1)
 	testing.expect_value(t, scanner.errors[0].kind, ScannerErrorKind.UNTERMINATED_STRING)
 }

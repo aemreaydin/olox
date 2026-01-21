@@ -51,6 +51,7 @@ scan_tokens :: proc(scanner: ^Scanner) -> [dynamic]Token {
 	for !is_eof(scanner) {
 		scan_token(scanner)
 	}
+	scanner.start = scanner.current
 	add_token(scanner, .EOF)
 	return scanner.tokens
 }
@@ -58,8 +59,8 @@ scan_tokens :: proc(scanner: ^Scanner) -> [dynamic]Token {
 @(private = "file")
 scan_token :: proc(scanner: ^Scanner) {
 	scanner.start = scanner.current
-	char := peek(scanner)
-	switch (char) {
+	char := advance(scanner)
+	switch char {
 	case '(':
 		add_token(scanner, TokenType.LEFT_PAREN)
 	case ')':
@@ -78,40 +79,40 @@ scan_token :: proc(scanner: ^Scanner) {
 		add_token(scanner, TokenType.PLUS)
 	case ';':
 		add_token(scanner, TokenType.SEMICOLON)
+	case '?':
+		add_token(scanner, TokenType.QUESTION)
+	case ':':
+		add_token(scanner, TokenType.COLON)
 	case '*':
 		add_token(scanner, TokenType.STAR)
 	case '!':
-		if peek_next(scanner) == '=' {
+		if match(scanner, '=') {
 			add_token(scanner, TokenType.BANG_EQUAL)
-			advance(scanner)
 		} else {
 			add_token(scanner, TokenType.BANG)
 		}
 	case '=':
-		if peek_next(scanner) == '=' {
+		if match(scanner, '=') {
 			add_token(scanner, TokenType.EQUAL_EQUAL)
-			advance(scanner)
 		} else {
 			add_token(scanner, TokenType.EQUAL)
 		}
 	case '<':
-		if peek_next(scanner) == '=' {
+		if match(scanner, '=') {
 			add_token(scanner, TokenType.LESS_EQUAL)
-			advance(scanner)
 		} else {
 			add_token(scanner, TokenType.LESS)
 		}
 	case '>':
-		if peek_next(scanner) == '=' {
+		if match(scanner, '=') {
 			add_token(scanner, TokenType.GREATER_EQUAL)
-			advance(scanner)
 		} else {
 			add_token(scanner, TokenType.GREATER)
 		}
 	case '/':
-		if peek_next(scanner) == '/' {
+		if peek(scanner) == '/' {
 			skip_comment(scanner)
-		} else if peek_next(scanner) == '*' {
+		} else if peek(scanner) == '*' {
 			skip_block_comment(scanner)
 		} else {
 			add_token(scanner, TokenType.SLASH)
@@ -122,10 +123,8 @@ scan_token :: proc(scanner: ^Scanner) {
 		add_number_token(scanner)
 	case 'a' ..= 'z', 'A' ..= 'Z', '_':
 		add_identifier_token(scanner)
-	case ' ', '\r', '\t':
-		advance(scanner)
-	case '\n':
-		advance(scanner)
+	case ' ', '\r', '\t', '\n':
+	// Whitespace - do nothing, already advanced
 	case:
 		add_error(scanner, .UNEXPECTED_CHARACTER)
 	}
@@ -133,20 +132,17 @@ scan_token :: proc(scanner: ^Scanner) {
 
 @(private)
 add_token :: proc(scanner: ^Scanner, token_type: TokenType) {
-	ch := peek(scanner)
+	lexeme := scanner.source[scanner.start:scanner.current]
 	token := Token {
 		token_type = token_type,
-		lexeme     = fmt.tprintf("%r", ch),
+		lexeme     = lexeme,
 		line       = scanner.line,
 	}
 	append(&scanner.tokens, token)
-	advance(scanner)
 }
 
 @(private)
 add_string_token :: proc(scanner: ^Scanner) {
-	advance(scanner)
-
 	for peek(scanner) != '"' && !is_eof(scanner) {
 		advance(scanner)
 	}
@@ -305,6 +301,19 @@ peek :: proc(scanner: ^Scanner) -> rune {
 		return 0
 	}
 	return rune(scanner.source[scanner.current])
+}
+
+@(private = "file")
+match :: proc(scanner: ^Scanner, expected: rune) -> bool {
+	if is_eof(scanner) {
+		return false
+	}
+	if rune(scanner.source[scanner.current]) != expected {
+		return false
+	}
+	scanner.current += 1
+	scanner.column += 1
+	return true
 }
 
 @(private = "file")

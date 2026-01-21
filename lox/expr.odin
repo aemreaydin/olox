@@ -5,6 +5,7 @@ Expr :: union {
 	^Grouping,
 	^Literal,
 	^Unary,
+	^Condition,
 }
 
 Binary :: struct {
@@ -24,4 +25,10 @@ Literal :: struct {
 Unary :: struct {
 	operator:   Token,
 	expression: Expr,
+}
+
+Condition :: struct {
+	expression:      Expr,
+	then_expression: Expr,
+	else_expression: Expr,
 }

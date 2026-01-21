@@ -40,7 +40,56 @@ destroy_parser :: proc(using parser: ^Parser) {
 }
 
 consume_expression :: proc(using parser: ^Parser) -> (Expr, ParserError) {
-	return consume_equality(parser)
+	return consume_comma(parser)
+}
+
+consume_comma :: proc(using parser: ^Parser) -> (Expr, ParserError) {
+	left, left_err := consume_ternary(parser)
+	if left_err.kind != .NONE {
+		return {}, left_err
+	}
+
+	for match(parser, .COMMA) {
+		operator := advance(parser)
+		right, right_err := consume_ternary(parser)
+		if right_err.kind != .NONE {
+			return {}, right_err
+		}
+
+		left = new_clone(Binary{left = left, operator = operator, right = right})
+	}
+
+	return left, {}
+}
+
+consume_ternary :: proc(using parser: ^Parser) -> (Expr, ParserError) {
+	left, err := consume_equality(parser)
+	if err.kind != .NONE {
+		return {}, err
+	}
+
+	for match(parser, .QUESTION) {
+		operator := advance(parser)
+		then_expr, then_err := consume_expression(parser)
+		if then_err.kind != .NONE {
+			return {}, then_err
+		}
+
+		_, consume_err := consume(parser, .COLON)
+		if consume_err.kind != .NONE {
+			return {}, consume_err
+		}
+
+		else_expr, else_err := consume_ternary(parser)
+		if else_err.kind != .NONE {
+			return {}, else_err
+		}
+
+		left = new_clone(
+			Condition{expression = left, then_expression = then_expr, else_expression = else_expr},
+		)
+	}
+	return left, {}
 }
 
 consume_equality :: proc(using parser: ^Parser) -> (Expr, ParserError) {

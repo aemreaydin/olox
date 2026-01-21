@@ -17,6 +17,12 @@ print_ast :: proc(expr: Expr) {
 	case ^Unary:
 		fmt.print(e.operator.lexeme)
 		print_ast(e.expression)
+	case ^Condition:
+		print_ast(e.expression)
+		fmt.print(" ? ")
+		print_ast(e.then_expression)
+		fmt.print(" : ")
+		print_ast(e.else_expression)
 	case:
 		return
 	}
